@@ -1,0 +1,27 @@
+# macOS
+.DS_Store
+*.swp
+*.swo
+*~
+.idea/
+
+# VS Code
+.vscode/
+
+# Windows
+Thumbs.db
+*.bak
+
+# Local environment
+.env
+.env.local
+local.properties
+
+# IDE
+*.iml
+*.sublime-workspace
+*.sublime-project
+
+# Temporary files
+*.tmp
+*.log
