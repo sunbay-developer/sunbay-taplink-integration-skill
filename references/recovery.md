@@ -63,6 +63,12 @@ Use these scenarios for an agent dry run and for deployment acceptance. Device/b
 | Scenario | Expected integration behavior |
 |---|---|
 | No credentials yet | Produces code/config wiring and compiles; runtime connection stays disabled until locally provisioned |
+| Chinese Sandbox preparation request | Uses Chinese public docs where available; distinguishes documentation environment from payment environment |
+| Documentation index returns 404 | Uses verified official page/navigation fallback and packaged version evidence; keeps independent integration work moving |
+| Current docs show another SDK version | Retains the consumer's pinned version and checks its source/artifact signatures |
+| User supplies SDK-local `llms.txt` declaring 1.0.9 | Reads the supplied file, reports version drift, uses 1.1.0 Maven dependency and explicit Cable protocol, checks success code 100/status SUCCESS, and queries the original transaction for 306/308 |
+| SDK-local `llms.txt` is absent | Continues from packaged references; does not require a private checkout or infer website index availability |
+| Merchant-wide transaction history | Locates the appropriate documented service and field/schema evidence before adding a backend call |
 | $10 SALE | Sends integer 1000 cents; UUID persisted before send; full public imports resolve against 1.1.0 |
 | Approved / declined | Only `isSuccess()` settles as approved; `isFailed()` records decline |
 | PROCESSING / unknown status | Retains pending state and offers original-ID query |

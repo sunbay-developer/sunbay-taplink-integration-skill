@@ -43,6 +43,8 @@ Inspect the merged manifest: network, camera and USB declarations come from the 
 
 `appId` and `secretKey` are required for authenticated use. `merchantId` is optional for local SDK initialization; the connected Tapro supplies its provisioned merchant context. Confirm environment and app/API permissions through onboarding. Local modes have no SDK `sandbox = true` switch: use the correct Tapro environment and corresponding app credentials.
 
+For onboarding, test instruments and Sandbox/go-live preparation, follow [official documentation lookup](documentation-lookup.md). Select documentation language from the conversation; Sandbox payment testing still uses the public documentation site by default. Keep the application's pinned SDK version while resolving those setup details.
+
 Reuse existing secret provisioning. For local development, add `local.secrets.properties` to `.gitignore` **before** creating it:
 
 ```properties

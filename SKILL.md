@@ -1,20 +1,22 @@
 ---
-name: integrating-taplink-sdk
+name: taplink-integration
 description: Use when integrating or troubleshooting TapLink Android SDK payments with Tapro, including On-Device, LAN, USB Cable, Sub-Screen, sale, refund, auth, transaction query, and timeout recovery.
 ---
 
-# Integrating TapLink SDK
+# TapLink Android SDK Integration
 
 Help an integrator reach a working first payment in their existing Android app, then add requested operations. Target: **SDK 1.1.0 + Tapro release_1.0.5**, checked **2026-11-04**. Exact revisions and evidence: [source baseline](references/source-baseline.md).
 
 ## Start with the shortest useful path
 
-1. Inspect Gradle, manifest, payment/order storage, lifecycle ownership and UI conventions. Infer existing choices before asking. Establish SDK/Tapro versions, deployment mode and requested operations.
+1. Inspect Gradle, manifest, payment/order storage, lifecycle ownership and UI conventions. Infer existing choices before asking. Establish SDK/Tapro versions, deployment mode and requested operations. Preserve the project's selected version; a newer registry release is information for a proposed upgrade.
 2. Read [quick start](references/quick-start.md) and adapt [the Kotlin example](assets/TaplinkQuickStart.kt). Start with initialization, one connection, SALE, result handling, original-transaction query and cleanup. Extend requested flows; one adapter can serve the selected connection modes.
 3. Confirm **where credentials will be injected**, without asking for secrets in chat. Missing credentials allow code generation and compilation. Authenticated device testing requires provisioned app credentials and terminal. `merchantId` is optional for local initialization.
 4. Compile the consumer app, inspect runtime dependencies, then report verification and outstanding device checks. Follow its existing specification, test and approval requirements.
 
-Use these pinned references for 1.1.0; private SDK/Tapro repository access is optional for integrators. For another version, check its artifact/source and release notes. If current web examples conflict with the target artifact, retain the target version's signatures and report the discrepancy.
+Use these pinned references for 1.1.0; private SDK/Tapro repository access is optional for integrators. When the user supplies a repository `llms.txt`, read its declared version and relevant sections, then reconcile examples with the target artifact using [documentation lookup](references/documentation-lookup.md). The SDK-local file has been updated to 1.1.0; older 1.0.9 copies need the corrections recorded in [source baseline](references/source-baseline.md#sdk-local-llmstxt).
+
+For onboarding, Sandbox preparation, go-live requirements or gaps in this package, follow [official documentation lookup](references/documentation-lookup.md): use the user's language, prefer clean Markdown, and read API schemas for HTTP fields. Production documentation is the default even for Sandbox payment testing. For another SDK version, check its artifact/source and release notes; retain target-artifact signatures when current web examples differ and report the discrepancy.
 
 ## Read only what the task needs
 
@@ -25,6 +27,7 @@ Use these pinned references for 1.1.0; private SDK/Tapro repository access is op
 | Refund, void, auth/post-auth, abort, tips, batch, terminal info | [Protocol and operations](taplink-protocol-reference.md) |
 | 303/306/307/308, lost response, query/reconnect | [Recovery](references/recovery.md) |
 | Version compatibility or skill maintenance | [Source baseline](references/source-baseline.md) |
+| Official docs, onboarding/Sandbox/go-live, related SUNBAY services | [Documentation lookup](references/documentation-lookup.md) |
 
 ## Essential integration rules
 
@@ -40,4 +43,4 @@ Use these pinned references for 1.1.0; private SDK/Tapro repository access is op
 
 ## Deliver a usable integration
 
-Return changed files, selected mode, pinned versions, local credential setup, build result and next device check. Exercise approved, declined, processing/unknown, timeout/disconnect, duplicate taps and cleanup. Report compilation separately from authenticated device validation. Connection success and terminal metadata alone do not establish permission to perform SALE.
+Return changed files, selected mode, pinned versions, local credential setup, build result and next device check. Cite the relevant official page or pinned source for new factual conclusions, with any version mismatch or missing evidence. Exercise approved, declined, processing/unknown, timeout/disconnect, duplicate taps and cleanup. Report compilation separately from authenticated device validation. Connection success and terminal metadata alone do not establish permission to perform SALE.

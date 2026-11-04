@@ -59,6 +59,28 @@ The old skill also used no-argument `createCableMode()` and `setPaymentMethod` o
 
 Public context: [Android SDK guide](https://docs.sunbay.us/en/sdk/client-side/android), [SDK release notes at this revision](https://github.com/sunbay-developer/taplink-sdk-android/blob/762abc2fa0355c46e33636fdf10a339d2e22c103/RELEASE-NOTES.md). Android platform permission guidance: [USB host](https://developer.android.com/develop/connectivity/usb/host).
 
+## SDK-local llms.txt
+
+Updated locally on **2026-11-04** to **SDK 1.1.0 + Tapro release_1.0.5**. Repository-relative path: `llms.txt`; revised working-tree Git blob: `4c66101bf61d5066add4b272cf0ef531ffa1c5b2`. Four Kotlin files extracted directly from the revised document compile against the published 1.1.0 AAR; 23 JVM model checks pass. Device/payment validation remains separate. Maven Central metadata also reported latest/release `1.1.0` on this date.
+
+The historical copy reviewed before this update came from SDK checkout `c96f16012d3193da3ff173da393ee130760c3a0b`, Git blob `a0c3194e55e50f2fe3c5a8fc431d4c4e0218c1d8`, and declared **1.0.9**. The pinned public `v1.1.0` tree has no `llms.txt` entry; the local document update does not change that tag. The table below records corrections for consumers who still have the historical copy.
+
+| Historical 1.0.9-copy content | Corrected 1.1.0 integration guidance |
+|---|---|
+| `implementation(project(":lib_taplink_sdk"))` | External apps use Maven `com.sunmi:sunbay-taplink-sdk-android:1.1.0`; see [quick start](quick-start.md) |
+| `CrossDeviceStrategy.AUTO`, `CableProtocol.AUTO`, implicit Cable protocol | Select LAN or CABLE explicitly; select `USB_VSP`, `RS232` or `USB_AOA` for Cable; see [connections](connections.md) |
+| Success code `"0"`; failure inferred from a nonzero code | Call result predicates: `isSuccess()` checks `"100"` and `"SUCCESS"`, `isProcessing()` checks `"PROCESSING"`, `isFailed()` checks `"FAILED"`; preserve an unknown-state branch |
+| `result.transactionRequestId!!` / `error.transactionRequestId!!` | Capture and persist the original request ID before sending; use it when callback IDs are absent |
+| `308` immediately creates a new transaction; generic `canRetryWithSameId` replay | Query the original operation and resolve its outcome before an authorized new attempt; see [recovery](recovery.md) |
+
+When this file is supplied, read it and check for drift before reusing examples. Its availability does not establish the availability of the website's language-specific index. External integrators can use the packaged references without obtaining the maintainer's checkout.
+
+## Documentation workflow reference
+
+The documentation lookup guidance was informed by [sunbay-integration-skill at commit 6160c300f4f1270679562d84c5a29779f848e6ad](https://github.com/sunbay-developer/sunbay-integration-skill/blob/6160c300f4f1270679562d84c5a29779f848e6ad/SKILL.md), reviewed on 2026-11-04. Its useful patterns are language-aware navigation, distinct page/Markdown/schema roles, registry/source verification and preservation of an already-pinned dependency.
+
+For this Android skill, those discovery patterns accompany the versioned SDK/Host evidence and compiled examples. Public production indexes `/zh/llms-md.txt` and `/en/llms-md.txt` returned HTTP 404 during the check; both Android guide pages and `/zh/docs` returned 200. The [lookup reference](documentation-lookup.md) therefore includes verified-page and navigation fallbacks. These HTTP results are observations on the review date, not a permanent availability rule. The external skill informs the documentation workflow; SDK/Tapro facts remain grounded in the sources listed above.
+
 ## Maintaining a new baseline
 
 1. Record the target release ref, immutable commit and actual artifact version. Inspect the intended Tapro release branch rather than a newer workspace checkout.
