@@ -1,658 +1,115 @@
-# TapLink SDK Protocol Reference (Snapshot)
+# TapLink SDK 1.1.0 protocol and operation reference
 
-> **Last Updated:** 2026-08-14  
-> **SDK Version:** 1.0.8 (released — LAN discovery & QR scan, signature/tip config source, Jackson migration)  
-> **This is a dated cache** — verify against the official SDK source before implementing.
+Checked 2026-11-04 against the [pinned SDK/Tapro source baseline](references/source-baseline.md). This file keeps its original path for installed skill users. Setup: [quick start](references/quick-start.md). Recovery: [recovery guide](references/recovery.md).
 
----
+## Public API map
 
-## Table of Contents
+| Type | Import |
+|---|---|
+| SDK / client | `com.sunmi.tapro.taplink.sdk.TaplinkSDK`, `.TaplinkClient` |
+| Configuration | `com.sunmi.tapro.taplink.sdk.config.TaplinkConfig`, `.ConnectionConfig` |
+| Callbacks | `com.sunmi.tapro.taplink.sdk.callback.PaymentCallback`, `.ConnectionListener`, `.DiscoveryListener`, `.TerminalInfoCallback` |
+| Amount / payment category / events | `com.sunmi.tapro.taplink.sdk.model.common.AmountInfo`, `.PaymentMethodInfo`, `.PaymentCategory`, `.PaymentEvent` |
+| Query | `com.sunmi.tapro.taplink.sdk.model.request.QueryRequest` |
+| Typed transaction requests | `com.sunmi.tapro.taplink.sdk.model.request.transaction.*` |
+| Batch close | `com.sunmi.tapro.taplink.sdk.model.request.transaction.settlement.BatchCloseRequest` |
+| Results | `com.sunmi.tapro.taplink.sdk.model.response.PaymentResult`, `.TerminalInfo` |
+| Errors | `com.sunmi.tapro.taplink.sdk.error.PaymentError`, `.ConnectionError` |
+| Mode / protocol / receipt | `com.sunmi.tapro.taplink.sdk.enums.CrossDeviceStrategy`, `.CableProtocol`, `.PrintReceipt` |
 
-1. [SDK Initialization](#sdk-initialization)
-2. [Connection Modes](#connection-modes)
-3. [Transaction Types & Request/Response](#transaction-types--requestresponse)
-4. [Amount Handling](#amount-handling)
-5. [Error Codes](#error-codes)
-6. [Callback & Thread Safety](#callback--thread-safety)
-7. [Recovery & Idempotency](#recovery--idempotency)
-8. [Tips](#tips)
-9. [Security & PCI](#security--pci)
-10. [Official References](#official-references)
+Entries beginning with `.` in the same cell share the preceding package. The Kotlin assets have explicit full imports. Use `TaplinkSDK.getClient().sale(request, callback)` and corresponding client methods. The SDK API is callback-based; any suspend/Flow interface is the consumer's adapter. Coroutine cancellation alone does not abort the terminal payment.
 
----
+## Identifiers, amounts and results
 
-## SDK Initialization
+- `referenceOrderId`: the merchant's order reference; SALE/AUTH-style builders require 6–32 characters, using letters, digits, `_`, `-`, `|`, `*`.
+- `transactionRequestId`: a UUID generated for each new monetary operation; persist before transmission. Keep the same original ID when querying that operation.
+- `transactionId`: the gateway's returned transaction identifier. Follow-up builders accept `originalTransactionId` or `originalTransactionRequestId`; choose one known reference.
+- `AmountInfo`: integer smallest currency units. `AmountInfo.of(1000L, "USD")` or `AmountInfo(BigDecimal("1000"), "USD")` means $10.00. The zero-argument `AmountInfo()` constructor is unavailable.
+- `AuthAmountInfo`: order amount and currency for AUTH, INCREMENT_AUTH and FORCED_AUTH. POST_AUTH uses `AmountInfo`.
+- Convert decimal UI input with an exact decimal/currency-exponent conversion and reject fractional minor units. For USD text: `BigDecimal(text).movePointRight(2).longValueExact()`. Avoid Double/Float conversions and assumptions that all currencies have two decimal places.
+- `PaymentResult.isSuccess()`: `code == "100" && transactionStatus == "SUCCESS"`. `isProcessing()`: status `PROCESSING`. `isFailed()`: status `FAILED`. Preserve an unresolved fallback for missing/unrecognized statuses.
+- `onProgress` carries `eventCode` and `message`; display progress on the main thread. Progress does not settle the order.
 
-### TaplinkConfig
+Capture the original ID in the callback closure. Persist sanitized identifiers, final status, approved amounts and appropriate receipt details. Treat result fields as nullable where declared; never dump the full result/card data to logs.
+
+## Transaction recipes
+
+[TransactionRecipes.kt](assets/TransactionRecipes.kt) contains compilable builders for the operations below. Every new monetary operation needs its own persisted UUID, callback and duplicate-submission protection. These recipes build requests only; the application authorizes and sends them.
+
+| Operation | Client call / request | Required operation data |
+|---|---|---|
+| SALE | `sale(SaleRequest, callback)` | Order reference, new ID, AmountInfo |
+| Referenced refund | `refund(RefundRequest.referencedBuilder()..., callback)` | New ID, original transaction reference, AmountInfo |
+| Non-referenced refund | `refund(RefundRequest.nonReferencedBuilder()..., callback)` | New ID, order reference, AmountInfo; card interaction and channel support |
+| VOID | `void(VoidRequest, callback)` | New ID and original transaction reference |
+| AUTH | `auth(AuthRequest, callback)` | New ID, order reference, AuthAmountInfo |
+| POST_AUTH | `postAuth(PostAuthRequest, callback)` | New ID, original authorization reference, AmountInfo |
+| INCREMENT_AUTH | `incrementalAuth(IncrementalAuthRequest, callback)` | New ID, original authorization reference, positive AuthAmountInfo |
+| FORCED_AUTH | `forcedAuth(ForcedAuthRequest, callback)` | New ID, order reference, AuthAmountInfo; supported terminal/channel flow |
+| TIP_ADJUST | `tipAdjust(TipAdjustRequest, callback)` | New ID, original transaction reference, tip amount in minor units |
+| BATCH_CLOSE | `batchClose(BatchCloseRequest, callback)` | New ID; explicitly select receipt behavior if needed |
+| ABORT | `abort(AbortRequest, callback)` | Original ongoing transaction request ID |
+| QUERY | `query(QueryRequest, callback)` | Original transaction ID or original request ID |
+
+Example dispatch (after persisting `newRequestId` and its order/terminal association):
 
 ```kotlin
-data class TaplinkConfig(
-    val appId: String,                          // Your app identifier (from onboarding) — required
-    val secretKey: String,                      // Secret key for HMAC — required
-    val merchantId: String? = null,             // Merchant account ID — OPTIONAL (merchant-less config supported since v1.0.7)
-    val logEnabled: Boolean = false,            // Disable in Release builds
-    val logLevel: LogLevel = LogLevel.INFO,
-    val timeout: Int = 180,                     // Default transaction timeout (seconds)
-    val defaultStaffInfo: StaffInfo? = null,
-    val defaultDeviceInfo: DeviceInfo? = null
-    // version defaults to the SDK's own BuildConfig.VERSION_NAME
-)
+val client = TaplinkSDK.getClient()
+val request = TransactionRecipes.referencedRefund(newRequestId, originalSaleId, 500L)
+client.refund(request, paymentCallback)
 ```
 
-> **Verify field order/names against the SDK source** — `config/TaplinkConfig.kt`. `merchantId` is
-> nullable in the current SDK, but most onboarding flows still require it; confirm with your account.
+The **referenced** refund builder has no `setPaymentMethod`; avoid copying that method from SALE/non-referenced refund. For a request-ID reference, replace `.setOriginalTransactionId(originalTxnId)` with `.setOriginalTransactionRequestId(originalRequestId)` in the recipe.
 
-### Initialize (once per app lifecycle)
+Void eligibility follows original transaction/batch state and processor rules; use refund for eligible settled transactions. Do not promise a fixed same-day window or issuer posting date. Tapro 1.0.5 rejects QR void with 303. Request availability in the SDK still requires Host/channel/merchant enablement.
+
+Abort targets the original operation and has no `.setTransactionRequestId(newId)`. Use it while the terminal flow is cancellable; reconcile the original final result afterward. Use the applicable void/refund operation for an already-authorized transaction.
+
+`ForcedAuthRequest.Builder` has no `setForcedAuthCode`. Follow the supported Tapro flow rather than inventing a field from a different API. Advanced transactions need channel-specific validation before rollout.
+
+## Query
 
 ```kotlin
-TaplinkSDK.init(context: Context, config: TaplinkConfig)
+import com.sunmi.tapro.taplink.sdk.model.request.QueryRequest
+
+val byRequest = QueryRequest.byTransactionRequestId(originalRequestId)
+val byTransaction = QueryRequest.byTransactionId(originalTransactionId)
+// Choose one known identifier, then:
+TaplinkSDK.getClient().query(byRequest, paymentCallback)
 ```
 
-**Behavior:**
-- Must be called before any payment or connection attempt.
-- Typically called in `Application.onCreate()`.
-- Credentials are **never exposed** after init; SDK handles them internally.
+There is no order-ID query setter in this version. The query result describes the original operation. Keep query attempts bounded and separate from monetary attempts; see [recovery](references/recovery.md).
 
----
+## Tips, signature and receipts
 
-## Connection Modes
+- `orderAmount` excludes tip. Known tip goes into `amount.tipAmount`, in minor units. For terminal-entered tips, use `tipConfig` instead; setting both is invalid.
+- `TipConfig(useHostConfig = true)` uses the terminal's configured policy. Explicit settings use `useHostConfig = false` with appropriate `onScreenTip`, `tipMode`, `tipWithTax` and suggestions. Validate the intended channel behavior.
+- `SignatureConfig` belongs in `model.common`; use supported factories such as `SignatureConfig.onScreen()` or the explicit constructor. Host policy and terminal/channel capabilities still apply.
+- The SDK exposes `tipAdjust`, but this does not establish enablement for every processor. Tapro's pinned 1.0.5 code has no complete `allowTipAdjustment` request path; avoid advertising an SDK flag to enable it. Confirm EPX/other channel capability separately.
+- `printReceipt` uses `PrintReceipt`; transaction defaults commonly use `AUTO`. Batch close supports batch-specific receipt selection. Choose deliberately instead of assuming no printing.
 
-### Mode A: App-to-App (Intent)
-
-**When:** POS app and Tapro are on the same Android device.
-
-```kotlin
-val config = ConnectionConfig.createAppMode()
-// or explicit:
-val config = ConnectionConfig()
-    .setConnectionMode(ConnectionMode.APP_TO_APP)
-
-TaplinkSDK.connect(config, connectionListener)
-```
-
-**Intent action:** `com.sunmi.tapro.taplink.action.SERVICE` (internal)  
-**Lifecycle:** Automatic discovery and connection via Intent.
-
-### Mode B: LAN (Network via mDNS)
-
-**When:** POS app is on a different device from Tapro, connected via local network.
+## Read terminal metadata
 
 ```kotlin
-// Option A — explicit host/port (or reuse a cached address):
-val config = ConnectionConfig.createLanMode("192.168.1.100", 8443) // or createLanMode() to reuse cache
-TaplinkSDK.connect(config, connectionListener)
+import com.sunmi.tapro.taplink.sdk.TaplinkSDK
+import com.sunmi.tapro.taplink.sdk.callback.TerminalInfoCallback
+import com.sunmi.tapro.taplink.sdk.error.PaymentError
+import com.sunmi.tapro.taplink.sdk.model.response.TerminalInfo
 
-// Option B — obtain the address first, then connect via the SAME LAN flow.
-// These APIs RETURN host/port via DiscoveryListener; they do NOT connect themselves. (since v1.0.8)
-TaplinkSDK.discoverLanServices(object : DiscoveryListener {      // one-shot mDNS (_taplink._tcp), 15s timeout
-    override fun onDiscovered(services: List<DiscoveredService>) {
-        val t = services.firstOrNull() ?: return                 // DiscoveredService(name, host, port)
-        TaplinkSDK.connect(ConnectionConfig.createLanMode(t.host, t.port), connectionListener)
+TaplinkSDK.getClient().getTerminalInfo(object : TerminalInfoCallback {
+    override fun onSuccess(info: TerminalInfo) {
+        val merchantId = info.merchantId
+        val terminalSn = info.terminal.sn
+        // Persist/display only the fields needed by the app; UI work goes to main.
     }
-    override fun onError(error: ConnectionError) { /* E501/E503 ... */ }
+    override fun onFailure(error: PaymentError) {
+        // Retain actual code/message; inspect onboarding, authentication and Host support.
+    }
 })
-// Or scan a `lan://host/port` QR shown on the terminal (built-in CameraX/ZXing scanner):
-TaplinkSDK.scanLanQrCode(discoveryListener)
-
-// One-call variants that discover/scan AND connect (report via ConnectionListener):
-TaplinkSDK.autoDiscoverAndConnect(connectionListener)
-TaplinkSDK.scanAndConnect(connectionListener)
 ```
 
-**Discovery process:**
-- mDNS discovery (`discoverLanServices` / `autoDiscoverAndConnect`) uses Android NSD — no extra dependency.
-- QR scan (`scanLanQrCode` / `scanAndConnect`) reads a `lan://host/port` code and needs CameraX + ZXing
-  (`implementation`, not transitive — add them to your app module) plus `CAMERA` permission (declared by SDK).
-- Discovery/scan errors: `E501` none found, `E502` all failed to connect, `E503` already in progress,
-  `E504` scan cancelled, `E505` camera denied, `E506` no usable camera.
-- There is **no** `DiscoveryConfig` / `startDiscovery` API — verify against `TaplinkApi.kt`.
+This reads the connected terminal and merchant metadata: `terminal.sn`, vendor/model/TIDs, merchant identity/address/MIDs. It has no transaction history, terminal list, busy flag or connected-POS owner. Tapro 1.0.5 handles this read even during payment activity. SDK 1.1.0 passes through Host errors instead of promising code 352.
 
-**Connection protocol:**
-- WebSocket over WLAN.
-- Port range: 8443–8453 (configurable).
-- TLS certificate pinning (if configured).
+## Scope of this version
 
-**Discovered service model** (returned by `discoverLanServices` / `scanLanQrCode`):
-```kotlin
-data class DiscoveredService(
-    val name: String,        // mDNS instance name (placeholder "QR" for scan results)
-    val host: String,        // resolved host / IP, e.g. "192.168.1.100"
-    val port: Int            // service port, e.g. 8443
-)
-```
-
-### Mode C: Cable (USB/Serial)
-
-**When:** POS app connects to Tapro via USB or serial cable.
-
-```kotlin
-val config = ConnectionConfig.createCableMode()
-// or explicit:
-val config = ConnectionConfig()
-    .setConnectionMode(ConnectionMode.CABLE)
-    .setCableProtocol(CableProtocol.AUTO)  // Recommended: auto-detect
-
-TaplinkSDK.connect(config, connectionListener)
-```
-
-**Protocol priority (auto-detect):**
-1. `USB_VSP` (CDC-ACM, Virtual Serial Port) — preferred, most compatible
-2. `RS232` (RS-232 serial, 9600 baud, hex frames)
-3. `USB_AOA` (Android Open Accessory, fallback for older hardware)
-
-**Explicit protocol selection:**
-```kotlin
-.setCableProtocol(CableProtocol.USB_VSP)   // Force USB VSP
-.setCableProtocol(CableProtocol.RS232)     // Force RS-232
-.setCableProtocol(CableProtocol.USB_AOA)   // Force USB AOA
-```
-
-**Android 12+ permissions:**
-- Manifest: `<uses-permission android:name="android.permission.USB_HOST" />`
-- Runtime: request `android.permission.USB_HOST` at runtime.
-
----
-
-## Transaction Types & Request/Response
-
-### Sale (Charge)
-
-**Request:**
-```kotlin
-val request = SaleRequest.builder()
-    .setReferenceOrderId(String)           // 6–32 chars, business order ID
-    .setTransactionRequestId(String)       // Unique, globally unique
-    .setAmount(AmountInfo(...))            // Required: in cents
-    .setPaymentMethod(PaymentMethodInfo(PaymentCategory.CARD))
-    .setDescription(String)                // Optional: receipt note
-    .setPrintReceipt(PrintReceipt.AUTO)    // AUTO / MERCHANT / CUSTOMER / BOTH / NONE
-    .setTipConfig(TipConfig(...))          // Optional: interactive on-screen tip prompts
-    .build()
-    // Note: a fixed/known tip is passed inside AmountInfo(tipAmount = ...), NOT as a builder setter.
-    // There is no SaleRequest.builder().setTipAmount(...).
-```
-
-**Response:**
-```kotlin
-data class PaymentResult(
-    val code: String,                      // Gateway/response code: "100" = reached gateway (NOT approval)
-    val transactionId: String,             // Unique transaction ID from terminal
-    val transactionRequestId: String?,     // Echo of request ID
-    val transactionStatus: String,         // "SUCCESS" / "FAILED" / "PROCESSING"
-    val message: String,                   // User-facing message
-    val cardInfo: CardInfo?,               // Masked card details (last4, brand) — see CardInfo
-    val authCode: String?,                 // Authorization code from bank
-    val rrn: String?,                      // Retrieval Reference Number
-    val createTime: String?,               // Transaction create time (string)
-    val completeTime: String?,             // Transaction complete time (string)
-    val receiptJson: String?               // Receipt content (JSON) if printReceipt requests it
-    // ...many more optional fields; see model/response/PaymentResult.kt for the full list
-) {
-    // Approved requires BOTH the gateway code "100" AND transactionStatus "SUCCESS":
-    fun isSuccess(): Boolean = code == "100" && transactionStatus == "SUCCESS"
-    fun isProcessing(): Boolean = transactionStatus == "PROCESSING"
-    fun isFailed(): Boolean = transactionStatus == "FAILED"   // a decline is a final result via onSuccess
-}
-```
-
-> The field list above is **simplified** — the real `PaymentResult` has ~30 fields (card details live in
-> `CardInfo`, times are strings, receipt is `receiptJson`). Always check the source before relying on a field name.
-
-### Refund
-
-**Referenced (with original transaction ID):**
-```kotlin
-val request = RefundRequest.referencedBuilder()
-    .setTransactionRequestId(String)       // New unique ID
-    .setOriginalTransactionId(String)      // From original sale
-    .setAmount(AmountInfo(...))
-    .setPaymentMethod(PaymentMethodInfo(PaymentCategory.CARD))
-    .setDescription(String)
-    .build()
-```
-
-**Non-referenced (no original transaction ID, requires card swipe):**
-```kotlin
-val request = RefundRequest.nonReferencedBuilder()
-    .setTransactionRequestId(String)
-    .setReferenceOrderId(String)           // New refund order ID
-    .setAmount(AmountInfo(...))
-    .setDescription(String)
-    .build()
-```
-
-**Response:** Same as `PaymentResult` (see Sale above).
-
-### Void (Same-day reverse)
-
-**Request:**
-```kotlin
-val request = VoidRequest.builder()
-    .setTransactionRequestId(String)       // New unique ID
-    .setOriginalTransactionId(String)      // From original sale (same-day only)
-    .build()
-```
-
-**Response:** `PaymentResult`
-
-**Constraints:**
-- Only works for **same-day** transactions.
-- Pre-settlement only (before batch close).
-- For cross-day voids, use Refund instead.
-
-### Authorization (Pre-Auth)
-
-**Request:**
-```kotlin
-val request = AuthRequest.builder()
-    .setReferenceOrderId(String)
-    .setTransactionRequestId(String)
-    .setAmount(AuthAmountInfo(
-        orderAmount = BigDecimal(...),     // In cents (smallest unit)
-        pricingCurrency = String           // "USD", "EUR", etc.
-    ))
-    .setDescription(String)
-    .build()
-```
-
-**Response:** `PaymentResult` with `authCode` and `transactionId` for later post-auth.
-
-### Post-Auth (Completion of Pre-Auth)
-
-**Request:**
-```kotlin
-val request = PostAuthRequest.builder()
-    .setTransactionRequestId(String)       // New unique ID
-    .setOriginalTransactionId(String)      // From auth()
-    .setAmount(AmountInfo(...))            // Final amount (may differ from auth)
-    .build()
-```
-
-**Response:** `PaymentResult`
-
-### Query (Status check)
-
-**Request:**
-```kotlin
-val request = QueryRequest()
-    .setTransactionRequestId(String)       // Original transaction request ID
-```
-
-**Response:** `PaymentResult` with **only** `transactionStatus` and `transactionId` populated.
-
-### Batch Close (End-of-day settlement)
-
-**Request:**
-```kotlin
-val request = BatchCloseRequest.builder()
-    .setTransactionRequestId(String)
-    .setDescription(String)
-    .build()
-```
-
-**Response:** `PaymentResult` with settlement summary.
-
-### Abort (Cancel in-progress transaction)
-
-**Request:**
-```kotlin
-val request = AbortRequest.builder()
-    .setTransactionRequestId(String)
-    .build()
-```
-
-**Response:** `PaymentResult` with abort status.
-
-**Constraint:** Only works before the transaction is sent to the bank. Once authorized, use Void/Refund.
-
----
-
-## Amount Handling
-
-### AmountInfo (for Sale, Refund, PostAuth)
-
-```kotlin
-data class AmountInfo(
-    val orderAmount: BigDecimal,           // In **cents** (smallest currency unit); excludes tip
-    val pricingCurrency: String,           // "USD", "EUR", "CNY", "JPY", etc.
-    val tipAmount: BigDecimal? = null,     // Optional pre-known tip (in cents)
-    val taxAmount: BigDecimal? = null,     // Optional tax (in cents)
-    val surchargeAmount: BigDecimal? = null,
-    val cashbackAmount: BigDecimal? = null
-)
-// Convenience: AmountInfo.of(1000L, "USD")  // $10.00
-```
-
-**Note:** `TipConfig` (on-screen tip prompts) is **not** part of `AmountInfo` — set it on the request builder
-via `.setTipConfig(...)` (since v1.0.6). Use a fixed `tipAmount` **or** an interactive `tipConfig`, not both.
-
-### AuthAmountInfo (for Auth)
-
-```kotlin
-data class AuthAmountInfo(
-    val orderAmount: BigDecimal,           // In cents (smallest unit)
-    val pricingCurrency: String            // ISO 4217, 3 chars
-)
-```
-
-### Conversion examples
-
-| Display | Unit | Code |
-|---|---|---|
-| $10.00 | USD (cents) | `BigDecimal("1000")` |
-| €10.00 | EUR (cents) | `BigDecimal("1000")` |
-| ¥10 | JPY (yen, no decimal) | `BigDecimal("10")` |
-| ¥10.00 | CNY (fen, 1/100 yuan) | `BigDecimal("1000")` |
-
-**Never:**
-- Use floating-point: `1000.0` ❌
-- Mix units: `10.00` for $10 ❌
-- Use `BigDecimal` constructor with double: `BigDecimal(10.0)` ❌
-
-**Always:**
-- Use string constructor: `BigDecimal("1000")` ✅
-- Verify currency before calculating ✅
-- Convert user input (e.g., "10.00" USD) to cents (1000) at the edge of your system ✅
-
----
-
-## Error Codes
-
-> **Two distinct fields.** `PaymentResult.code` is the **gateway/response** code — `"100"` means the request
-> reached the gateway successfully (**not** that the payment was approved). Whether the payment succeeded is in
-> `transactionStatus` (`"SUCCESS"` / `"PROCESSING"` / `"FAILED"`). `isSuccess()` requires **both** `code == "100"`
-> **and** `transactionStatus == "SUCCESS"`. The numeric codes below (`20x`–`31x`) arrive via `onFailure(PaymentError)`
-> as communication/system errors; a declined card is **not** an error code — it comes back via `onSuccess` with
-> `transactionStatus == "FAILED"`.
-
-### Error Code Ranges
-
-| Range | Category | Root Cause |
-|---|---|---|
-| 201–203 | **Initialization** | SDK not properly initialized, config invalid, context missing |
-| 211–214 | **Connection State** | Not connected, connection lost, reconnect in progress |
-| 231–232 | **App-to-App Mode** | Tapro app not installed, Intent not responded, permissions issue |
-| 241–242 | **LAN Mode** | Device not found, network unreachable, DNS resolution failed |
-| 251–255 | **Cable Mode** | USB device not found, serial port error, permission denied |
-| 301–305 | **Transaction Parameter/Send Error** | Invalid amount, missing field, malformed request, send failed (retryable with same ID) |
-| **306** | **Timeout** | No response from device or server (status unknown, must query) |
-| 307–311 | **Transaction Failed** | Card declined, insufficient funds, auth failed, etc. (non-retryable without new ID) |
-
-### Common Error Codes (detailed)
-
-| Code | Name | Meaning | Action |
-|---|---|---|---|
-| 201 | INIT_ERROR | SDK initialization failed | Restart app, check credentials |
-| 211 | NOT_CONNECTED | Attempted transaction without connection | Call `connect()` first |
-| 306 | **TIMEOUT** | No response from terminal or server | **Query status before retrying** |
-| 307 | TRANSACTION_FAILED | Card declined, insufficient funds, etc. | Retry with **new** `transactionRequestId` |
-| 308 | TRANSACTION_REJECTED | Invalid amount, card expired, etc. | Retry with **new** `transactionRequestId` |
-
-### Retry Rules
-
-```kotlin
-when (error.code) {
-    "306" -> {
-        // ⚠️ TIMEOUT — status unknown
-        // MUST query before deciding to retry or show error
-        queryTransactionStatus(error.transactionRequestId!!)
-    }
-    in listOf("301", "302", "303", "304", "305") -> {
-        // Parameter/send error — safe to retry with same ID
-        retryWithSameRequest()
-    }
-    in listOf("307", "308", "309", "310", "311") -> {
-        // Transaction failed — must use NEW transactionRequestId
-        retryWithNewId()
-    }
-    else -> {
-        // Other errors — decide based on error category
-        showError(error.message)
-    }
-}
-```
-
----
-
-## Callback & Thread Safety
-
-### ConnectionListener
-
-```kotlin
-interface ConnectionListener {
-    fun onConnected(deviceId: String, taproVersion: String)
-    fun onDisconnected(reason: String)
-    fun onError(error: ConnectionError)
-}
-```
-
-### PaymentCallback
-
-```kotlin
-interface PaymentCallback {
-    fun onProgress(event: PaymentEvent)
-    fun onSuccess(result: PaymentResult)
-    fun onFailure(error: PaymentError)
-}
-```
-
-**PaymentEvent (progress states):**
-- `"WAITING_CARD"` → "Please present card"
-- `"WAITING_PIN"` → "Enter PIN on terminal"
-- `"WAITING_SIGNATURE"` → "Please sign on terminal"
-- `"WAITING_RESPONSE"` → "Contacting bank..."
-- `"PRINTING"` → "Printing receipt..."
-- `"COMPLETED"` → Operation complete
-- `"CANCEL"` → User cancelled
-
-### Thread Safety
-
-**⚠️ Critical:** Callbacks may run on **background threads**. Always wrap UI updates:
-
-```kotlin
-override fun onSuccess(result: PaymentResult) {
-    runOnUiThread {
-        // Update UI here
-        updateUI(result)
-    }
-}
-
-override fun onProgress(event: PaymentEvent) {
-    runOnUiThread {
-        showProgressHint(event.eventCode)
-    }
-}
-```
-
----
-
-## Recovery & Idempotency
-
-### transactionRequestId
-
-- **Must be globally unique** per transaction attempt.
-- Enable safe retry without duplicate charges.
-- Recommended: UUID or timestamp-based.
-
-```kotlin
-val transactionRequestId = UUID.randomUUID().toString()
-// or
-val transactionRequestId = "txn_${System.currentTimeMillis()}_${Random.nextInt(1000)}"
-```
-
-### Save before sending
-
-```kotlin
-// 1. Save transactionRequestId to DB first
-val txnRecord = TransactionRecord(
-    transactionRequestId = transactionRequestId,
-    status = "PENDING",
-    amount = amount,
-    timestamp = System.currentTimeMillis()
-)
-database.insert(txnRecord)
-
-// 2. Then send the transaction
-client.sale(request, callback)
-
-// 3. On response (success/failure/timeout), update the record
-```
-
-### Timeout Recovery (Error 306)
-
-```kotlin
-fun handleTimeout(transactionRequestId: String, attempt: Int = 1) {
-    if (attempt > 12) {  // Max 12 retries × 5s = 60s
-        showError("Transaction status unknown. Contact support.")
-        return
-    }
-
-    val queryRequest = QueryRequest().setTransactionRequestId(transactionRequestId)
-    client.query(queryRequest, object : PaymentCallback {
-        override fun onSuccess(result: PaymentResult) {
-            when (result.transactionStatus) {
-                "SUCCESS" -> recordTransaction(result)
-                "FAILED" -> showError("Transaction declined")
-                "PROCESSING" -> {
-                    // Still processing, poll again in 5s
-                    Handler(Looper.getMainLooper()).postDelayed(
-                        { handleTimeout(transactionRequestId, attempt + 1) },
-                        5000
-                    )
-                }
-            }
-        }
-        override fun onFailure(error: PaymentError) {
-            // Query itself failed, retry
-            Handler(Looper.getMainLooper()).postDelayed(
-                { handleTimeout(transactionRequestId, attempt + 1) },
-                5000
-            )
-        }
-        override fun onProgress(event: PaymentEvent) {}
-    })
-}
-```
-
----
-
-## Tips
-
-### On-screen tips (during sale)
-
-```kotlin
-val saleRequest = SaleRequest.builder()
-    .setReferenceOrderId("ORDER_${System.currentTimeMillis()}")
-    .setTransactionRequestId(UUID.randomUUID().toString())
-    .setAmount(AmountInfo(
-        orderAmount = BigDecimal("1000"),  // $10.00 (tip is NOT part of orderAmount)
-        pricingCurrency = "USD"
-    ))
-    // tipConfig lives on the REQUEST (since v1.0.6), NOT inside AmountInfo:
-    .setTipConfig(TipConfig(
-        onScreenTip = true,                // Show tip prompts on the terminal
-        tipMode = TipMode.ON_SALE,         // ON_SALE (during sale) or AFTER_SALE
-        tipWithTax = false,                // Don't include tax in tip calculations
-        suggestions = TipSuggestions(
-            feeMode = FeeMode.RATE,        // RATE (percentage) or AMOUNT (fixed)
-            values = listOf(15, 18, 20)    // 15%, 18%, 20%
-        )
-    ))
-    .build()
-```
-
-### Post-auth tip adjustment
-
-```kotlin
-val tipRequest = TipAdjustRequest.builder()
-    .setTransactionRequestId(UUID.randomUUID().toString())
-    .setOriginalTransactionId(originalSaleId)
-    .setTipAmount(BigDecimal("200"))  // $2.00 tip in cents
-    .build()
-
-client.tipAdjust(tipRequest, callback)
-```
-
-### Tip exclusivity
-
-- **Cannot set both `tipAmount` and `tipConfig`** — pick one.
-- **`orderAmount` excludes tip** — always use the pre-tip sale amount.
-- **Post-auth tip adjust** for settled (batch-closed) transactions.
-
----
-
-## Security & PCI
-
-### Credential Storage
-
-```kotlin
-// ✅ Correct: BuildConfig injection
-val appId = BuildConfig.TAPLINK_APP_ID
-val merchantId = BuildConfig.TAPLINK_MERCHANT_ID
-val secretKey = BuildConfig.TAPLINK_SECRET_KEY
-
-// ❌ Wrong: hardcoded
-val appId = "my_app_id_12345"
-```
-
-**Inject via:**
-- `local.properties` (local development, excluded from repo)
-- Environment variables (CI/CD builds)
-- Secure storage (e.g., Android Keystore)
-
-### Card Data
-
-**Store only:**
-- Masked last 4 digits (e.g., `****1234`)
-- Card brand (VISA, MASTERCARD, AMEX)
-
-**Never store:**
-- Full PAN (card number)
-- Track 1 / Track 2 data
-- CVV or CVC
-- Expiry date (if not required by business)
-
-### Production checklist
-
-- [ ] `logEnabled = false` in Release builds
-- [ ] Credentials from BuildConfig, never hardcoded
-- [ ] Card data stored only as masked last4 + brand
-- [ ] All amounts in cents (no floating-point)
-- [ ] `disconnect()` + `removeConnectionListener()` in `onDestroy()`
-
----
-
-## Official References
-
-### SDK Artifact
-- **Maven coordinate:** `com.sunmi:sunbay-taplink-sdk-android` (pin your target version)
-- **Package:** `com.sunmi.tapro.taplink.sdk.*`
-- **Key classes to reference (inspect via your IDE):**
-  - `TaplinkSDK` (main API)
-  - `TaplinkClient` (transaction methods)
-  - `ConnectionConfig`, `TaplinkConfig` (setup)
-  - `SaleRequest`, `RefundRequest`, `VoidRequest`, etc. (requests)
-  - `PaymentResult`, `PaymentError`, `ConnectionError` (responses)
-
-### Documentation
-- **Official Android SDK guide (authoritative):** https://docs.sunbay.us/en/sdk/client-side/android
-- **Release notes (breaking changes):** linked from the docs site
-- **API reference:** see the docs site
-
-### Version History
-- **Current version:** 1.0.8 (released, as of 2026-08-14)
-- **SDK published as:** `com.sunmi:sunbay-taplink-sdk-android:1.0.8` (pin your target version)
-- **See the release notes for breaking changes in your target version**
-
----
-
-## Updating this snapshot
-
-When the SDK changes (new field, new error code, breaking API change), update this file:
-
-1. Check the official SDK source (`taplinksdk/lib_taplink_sdk/src/main/java/com/sunmi/tapro/taplink/sdk/`)
-2. Verify the change in the online docs (`sunbay-open-docs/src/content/en/sdk/client-side/android.mdx`)
-3. Update the corresponding section below.
-4. Update the "Last Updated" date at the top.
-5. Commit with message: `docs: update protocol reference for SDK vX.Y.Z`
-
+SDK 1.1.0 supplies local On-Device, explicit Cross-Device and Sub-Screen APIs. Cloud integration, later SAF APIs and proposed multi-terminal reservation/`terminalSn` connection APIs require their own matching version/documentation. Continue using the user's selected 1.1.0 API surface for this skill's baseline.
