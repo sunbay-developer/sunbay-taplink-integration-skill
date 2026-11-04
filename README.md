@@ -1,76 +1,87 @@
 # sunbay-taplink-integration-skill
 
-An agent skill for integrating **TapLink Android SDK 1.1.0** with **Tapro 1.0.5**, starting with one SALE and a reliable query/recovery path in an existing Android app.
+Add **SUNBAY TapLink Android SDK 1.1.0 + Tapro 1.0.5** to an existing Kotlin or Java POS app: first SALE, original-transaction query, durable recovery and lifecycle cleanup. The agent adapts the integration to your current project.
 
-Grounded in SDK tag `v1.1.0`, its AAR, and Tapro branch `release_1.0.5`. See [exact revisions and verification limits](references/source-baseline.md).
+## Get started
 
-## Naming
+### 1. Install
+
+Run in your Android project with [Node.js 22.20+ and the skills CLI](https://github.com/vercel-labs/skills):
+
+```bash
+npx skills add sunbay-developer/sunbay-taplink-integration-skill --skill taplink-integration
+```
+
+Select your coding agent when prompted. To target one explicitly, append `--agent codex` or `--agent claude-code`. Installation is project-local by default. Open a new agent session if the skill is not yet discovered.
+
+**Without Node.js**, clone into the skill directory recognized by your client:
+
+```bash
+git clone https://github.com/sunbay-developer/sunbay-taplink-integration-skill.git .agents/skills/taplink-integration
+```
+
+For Claude Code's dedicated directory, use `.claude/skills/taplink-integration` as the destination. For an offline handoff, extract the supplied `taplink-integration.zip` into `.agents/skills/` (or your client's skill directory). The final path must be `.agents/skills/taplink-integration/SKILL.md`, with `assets/` and `references/` beside it. Keep the whole folder together.
+
+### 2. Give the agent a task
+
+Paste this in your **existing Android project**:
+
+> Use taplink-integration. Add a $10 card SALE and original-transaction query using SDK 1.1.0 and Tapro 1.0.5. POS and Tapro run on the same device. Follow the project's existing language, Gradle files, order storage and UI. Credentials will be configured locally later. Implement the wiring and run the app's compile task.
+
+For a LAN deployment:
+
+> Use taplink-integration. Integrate SDK 1.1.0 and Tapro 1.0.5 into this Android POS over LAN. Start with a $10 card SALE and original-transaction query. Reuse the existing language, order storage and UI. Credentials will be configured locally later. Modify the project, compile it and list the next device checks.
+
+The agent inspects the project first. Supply only choices it cannot infer: same device / LAN / USB / Sub-Screen, the intended terminal/protocol, and requested operations. Existing configuration and code supply the other details. Keep real app keys out of chat and source control.
+
+### 3. Check the handoff
+
+Expect changed project files, selected module/mode/versions, local configuration location, the exact build result and the next device test. You can compile before obtaining credentials. Provisioning, terminal identity, transaction permissions and test-payment results are verified on the intended deployment.
+
+For an existing integration, keep the task narrow:
+
+> Use taplink-integration. This Java app already takes LAN payments. Fix recovery for 306 and a missing callback request ID. Reuse our current payment service and order repository.
+
+## What is included
+
+| Resource | When you need it |
+|---|---|
+| [Skill entry point](SKILL.md) | Agent routing and essential payment invariants |
+| [Project wiring](references/project-wiring.md) | Find the app module and implement storage, UI, terminal identity and lifecycle seams |
+| [Quick start](references/quick-start.md) | Dependency, local credentials, initialization and first payment |
+| [Java / Groovy guide](references/java-and-groovy.md) | Java signatures and Groovy Gradle setup |
+| [Kotlin adapter](assets/TaplinkQuickStart.kt) / [Java adapter](assets/TaplinkQuickStartJava.java) | Compilable public-API samples to adapt to the existing app |
+| [Transaction recipes](assets/TransactionRecipes.kt) / [operation reference](taplink-protocol-reference.md) | Refund, void, auth, tips, batch and terminal info |
+| [Connections](references/connections.md) / [recovery](references/recovery.md) | Transport selection, discovery, unknown outcomes and errors |
+| [Documentation lookup](references/documentation-lookup.md) | Official docs, local llms.txt, onboarding and schema discovery |
+| [Source baseline](references/source-baseline.md) | Exact SDK/Host revisions, version corrections, workflow comparisons and verification limits |
+
+The package works without private SDK/Host checkout access. For another selected SDK version, verify its artifact/API and release notes before adapting the examples.
+
+## Names and migration
 
 | Item | Name |
 |---|---|
 | Repository / distribution | `sunbay-taplink-integration-skill` |
-| Skill identifier and installed directory | `taplink-integration` |
+| Skill identifier / installed directory | `taplink-integration` |
 | Display title | TapLink Android SDK Integration |
 
-## Install
+Earlier project names were `taplink-sdk-skill` and `taplink-integration-skill`; the previous skill identifier was `integrating-taplink-sdk`. Update the existing checkout, rename its installed skill folder to `taplink-integration`, preserve local changes and keep one installed copy. Update explicit prompts/paths and reload the agent session.
 
-Clone the complete repository into a skills directory recognized by your agent, using `taplink-integration` as the installed folder name. Keep the references and assets beside `SKILL.md`.
-
-Use the project's GitHub clone URL:
+For an older clone:
 
 ```bash
-TAPLINK_SKILL_REPO="https://github.com/sunbay-developer/sunbay-taplink-integration-skill.git"
+git remote set-url origin https://github.com/sunbay-developer/sunbay-taplink-integration-skill.git
 ```
 
-For clients supporting project-level `.agents/skills`:
+## Package and maintain
+
+From a source checkout, build a shareable ZIP with Python 3.9+ (standard library only):
 
 ```bash
-git clone "$TAPLINK_SKILL_REPO" .agents/skills/taplink-integration
+python3 scripts/package_skill.py
 ```
 
-For Claude Code:
+Output: `dist/taplink-integration.zip`. The package contains the correctly named skill folder, references, examples, license and packaging helper. Git/IDE state, local properties and other files outside the distribution allowlist are excluded. The helper rejects resource symlinks and missing local link targets before replacing a previous delivery.
 
-```bash
-git clone "$TAPLINK_SKILL_REPO" ~/.claude/skills/taplink-integration
-```
-
-For other clients, use their configured skill directory or point the assistant at this repository's `SKILL.md`.
-
-### Migrate an existing installation
-
-The project is now `sunbay-taplink-integration-skill`. Earlier project names were `taplink-sdk-skill` and `taplink-integration-skill`; the previous skill identifier was `integrating-taplink-sdk`. Update the existing checkout to the revision containing this rename, then rename its installed skill directory to `taplink-integration`. Preserve local changes and keep one installed copy. Update prompts and any explicit skill-path references to the new name, then reload skills or start a new agent session.
-
-For an existing clone, update `origin` to `https://github.com/sunbay-developer/sunbay-taplink-integration-skill.git` with `git remote set-url origin <clone-url>`. Use `sunbay-taplink-integration-skill` for the project checkout directory and `taplink-integration` for the installed skill directory.
-
-## Use
-
-> Use taplink-integration. Add a $10 card SALE to this Android app using SDK 1.1.0 and Tapro 1.0.5 on the same device. Include original-transaction query and lifecycle cleanup. Credentials will be configured locally.
-
-> Use taplink-integration. Our tablet connects to Tapro over LAN. Add discovery and terminal selection; handle a 306 timeout without duplicating payment.
-
-> Use taplink-integration. Keep Android SDK 1.1.0 and Tapro 1.0.5. Check the Chinese official docs for Sandbox onboarding and test preparation, then finish the local integration code.
-
-Prepare and compile code before obtaining credentials. Supply real credentials through local provisioning for authenticated device tests; keep secret keys out of chat and source control.
-
-If you supply an SDK-local `llms.txt`, the skill reads its declared version and relevant examples, then reconciles them with the target SDK. The SDK-local file now targets 1.1.0; [migration corrections](references/source-baseline.md#sdk-local-llmstxt) explain differences in older 1.0.9 copies. The packaged references also work without an SDK checkout.
-
-For current onboarding/process questions, the skill selects documentation by the user's language and uses clean Markdown/API schemas where the official site exposes them. The pinned SDK/AAR reference keeps code version-specific, and documented fallbacks handle unavailable indexes. See [documentation lookup](references/documentation-lookup.md).
-
-## Contents
-
-| File | Purpose |
-|---|---|
-| [SKILL.md](SKILL.md) | Agent entry point and essential payment rules |
-| [Quick start](references/quick-start.md) | Gradle, credentials, initialization and first-payment wiring |
-| [Kotlin example](assets/TaplinkQuickStart.kt) | Public API sample: SALE, query, callbacks and cleanup |
-| [Connections](references/connections.md) | Explicit LAN/Cable, discovery, USB and Sub-Screen |
-| [Protocol reference](taplink-protocol-reference.md) | Request recipes, amounts and follow-up operations |
-| [Recovery](references/recovery.md) | Unknown outcomes, timeout units, errors and checks |
-| [Source baseline](references/source-baseline.md) | Versioned evidence and maintenance guidance |
-| [Documentation lookup](references/documentation-lookup.md) | Supplied local llms.txt, version reconciliation, language/environment selection, official content and schema discovery, missing-index fallback |
-
-## Maintain
-
-Check changes against the target SDK artifact and Tapro branch. Update the baseline and affected references together. Compile the Kotlin asset against the target AAR; run the application scenarios in [recovery](references/recovery.md#integration-verification). Validate metadata and local links. Keep the skill identifier `taplink-integration` and protocol-reference path stable. Document future renames with installation migration steps.
-
-The consumer supplies durable order storage and UI. Validate terminal, processor and merchant capabilities on the intended deployment. Use English Conventional Commit messages. MIT: [LICENSE](LICENSE).
+For maintenance, run `python3 -m unittest discover -s tests -v`, validate skill metadata/local links, compile language assets against the actual AAR and exercise relevant [integration scenarios](references/recovery.md#integration-verification). Keep target SDK/Host evidence and affected references aligned. Compilation, device/payment results and current publication status are separate evidence. Use English Conventional Commit messages. [MIT license](LICENSE).

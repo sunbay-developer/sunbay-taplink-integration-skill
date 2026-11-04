@@ -1,5 +1,7 @@
 # First payment: SDK 1.1.0 + Tapro 1.0.5
 
+Start with the existing app's [project wiring](project-wiring.md). This page uses Kotlin DSL and Kotlin examples; for Java source or Groovy build files, use the matching [Java/Groovy guide](java-and-groovy.md) while retaining these dependency and payment requirements.
+
 ## 1. Resolve dependencies
 
 Reuse the consumer's version catalog. Add repositories inside the existing `settings.gradle.kts` dependency resolution block:
@@ -107,7 +109,7 @@ Always retain the value returned by `TaplinkConfig` setters, or construct a fres
 
 ## 4. Connect, send, recover
 
-Adapt [TaplinkQuickStart.kt](../assets/TaplinkQuickStart.kt). It includes complete imports and public API calls. Implement `PaymentJournal` using the app's existing order repository and map `Update` to its UI state.
+Choose the asset matching existing source: [Kotlin](../assets/TaplinkQuickStart.kt) or [Java](../assets/TaplinkQuickStartJava.java). Both include complete public imports. Implement the journal using the app's existing order repository and map updates to its UI; complete the concrete seams in [project wiring](project-wiring.md#make-the-app-wiring-concrete). The wiring below is Kotlin.
 
 The journal must atomically reserve the order, reject duplicate/unresolved submissions and persist request ID, order, amount/currency and terminal association **before transmission**. Its methods must be thread-safe. Run synchronous journal work on the app's IO dispatcher. Storage schema and order settlement remain app-owned.
 
@@ -143,4 +145,4 @@ Handle `Update.Unresolved` with query on the same terminal/session, following [b
 
 Call `session.close()` at the payment owner's lifecycle end; it calls both SDK cleanup methods. If a service owns the singleton connection, the service owns cleanup and Activities detach their UI subscriptions. Avoid closing a shared connection on transient screen rotation. Preserve pending records across process death; reconnect and query before another payment for those orders.
 
-Run the actual app variant, e.g. `./gradlew :app:compileDebugKotlin` for an unflavored app. Inspect `:app:dependencies --configuration debugRuntimeClasspath` (adapt flavors). Then run [device scenarios](recovery.md#integration-verification). Compilation checks signatures; device tests verify transport, initialization, merchant permissions and payment behavior.
+Run the actual app variant: `./gradlew :app:compileDebugKotlin` for Kotlin or `./gradlew :app:compileDebugJavaWithJavac` for Java in an unflavored app. Inspect `:app:dependencies --configuration debugRuntimeClasspath` (adapt flavors). Then run [device scenarios](recovery.md#integration-verification). Compilation checks signatures; device tests verify transport, initialization, merchant permissions and payment behavior.

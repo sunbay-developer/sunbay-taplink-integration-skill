@@ -25,3 +25,7 @@ local.properties
 # Temporary files
 *.tmp
 *.log
+
+# Generated delivery packages and Python caches
+dist/
+__pycache__/

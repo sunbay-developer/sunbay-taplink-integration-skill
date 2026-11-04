@@ -81,12 +81,38 @@ The documentation lookup guidance was informed by [sunbay-integration-skill at c
 
 For this Android skill, those discovery patterns accompany the versioned SDK/Host evidence and compiled examples. Public production indexes `/zh/llms-md.txt` and `/en/llms-md.txt` returned HTTP 404 during the check; both Android guide pages and `/zh/docs` returned 200. The [lookup reference](documentation-lookup.md) therefore includes verified-page and navigation fallbacks. These HTTP results are observations on the review date, not a permanent availability rule. The external skill informs the documentation workflow; SDK/Tapro facts remain grounded in the sources listed above.
 
+## Integration workflow comparisons
+
+Reviewed **2026-11-04**. These official ecosystem examples inform the skill's usability; payment/API behavior still follows the pinned TapLink sources above.
+
+| Reference | Pattern applied here |
+|---|---|
+| [Stripe best practices](https://github.com/stripe/ai/blob/8f4c6295246b771bdfbffd4a50171f75a03507c8/skills/stripe-best-practices/SKILL.md) | Route by requested integration task; load only relevant references and retain critical payment requirements |
+| [Vercel AI SDK](https://github.com/vercel/ai/blob/6adf8c797d5e2bf056c077f946aa12dabb3cb268/skills/use-ai-sdk/SKILL.md) | Inspect the actual target package/module and version, verify signatures and compile after editing |
+| [RevenueCat Android configuration](https://github.com/RevenueCat/play-billing-skills/blob/8fa2e4c25d4171be5950888b3ce89d500f6e5cfa/revenuecat/configuring-the-sdk/SKILL.md) | Find existing initialization and Gradle wiring first; adapt the app's language/DSL and verify a small integration path |
+| [skills CLI](https://github.com/vercel-labs/skills/blob/9197d919034d19010ae303cf96bf19ad087dd4be/docs/commands.md) and [Agent Skills specification](https://agentskills.io/specification) | One-command installation, installed folder matching the skill name, complete resources and progressive disclosure |
+
+A Java baseline application exercise compiled successfully using the previous skill, but required translating Kotlin factories/static entry points and reading several references. It exposed missing Java examples and a need for concrete existing-store/terminal-identity wiring. The revised package adds a compiled Java adapter and Java/Groovy guide, targeted wiring instructions, direct installation and a clean offline ZIP. It preserves the pinned SDK, selected consumer architecture and local credential handling. No elapsed-time reduction or device-payment success is inferred from these checks.
+
+### Usability validation
+
+Validation on 2026-11-04 used the actual 1.1.0 AAR and isolated consumer fixtures:
+
+- `skills` CLI **1.7.6** discovered and copied the skill into a temporary Codex project; ZIP extraction produced the same canonical `taplink-integration/` layout.
+- Both Kotlin assets and the Java adapter compiled against SDK 1.1.0 / Android 35. The Java terminal-info snippet also compiled. **20** existing Kotlin/JVM model checks and **6** Java request/connection checks passed.
+- The exact Groovy credential snippet configured a temporary Gradle DSL fixture with empty and escaped string values (**2** cases). This verifies the snippet's syntax/injection, separately from a real consumer's AGP build.
+- **5** packaging tests covered complete resources, exclusion of local state, invalid names, symlinks and missing links without overwriting a previous delivery.
+- Fresh-context Java first-integration code used the distributed Java asset and compiled while preserving the fixture's existing store interface. Application-specific pending-record/terminal-binding reads remain explicit wiring points.
+- A separate existing-callback scenario changed recovery without replacing initialization/storage/language. Its **7** local checks passed after removing 306 SALE replay and using the captured original ID for 306/308 and unresolved results.
+
+These are installation, compilation, model and application-exercise checks. Real terminal, backend, merchant/processor permissions and payment acceptance remain deployment checks. No time-to-integrate guarantee is derived from the exercises.
+
 ## Maintaining a new baseline
 
 1. Record the target release ref, immutable commit and actual artifact version. Inspect the intended Tapro release branch rather than a newer workspace checkout.
 2. Recheck the public types and corresponding Host handling. Keep facts from implementation distinct from proposed behavior and device-validated capabilities.
 3. Update only affected references and examples. Keep offline use practical; do not require every integrator to clone internal repositories or provide secrets before code generation.
-4. Compile all Kotlin assets against the real AAR and Android SDK classpath. Exercise builders and result helpers. Validate local links and skill metadata.
+4. Compile Kotlin and Java assets against the real AAR and Android SDK classpath. Exercise builders and result helpers. Validate local links and skill metadata.
 5. Run a fresh-context integration scenario from [recovery](recovery.md#integration-verification), including missing credentials and unknown outcomes. Record source checks, compiler checks and any actual device checks separately.
 
 SDK/Tapro source changes, publishing, dependency upgrades in other repositories and real payment tests follow their own authorization and release processes.

@@ -10,6 +10,7 @@ Every new monetary operation uses a new UUID. Query retrieves an existing operat
 
 1. On `PROCESSING`, unknown result, `306`, `308`, lost response or disconnect after submission, keep the order pending. Preserve the original record; reconnect to the same terminal if necessary.
 2. Query `QueryRequest.byTransactionRequestId(originalRequestId)` using `TaplinkSDK.getClient().query(request, callback)`.
+   Java uses `new QueryRequest().setTransactionRequestId(originalRequestId)` with the same client call; keep the captured original ID when callback IDs are missing.
 3. Inspect `isSuccess()`/`isFailed()`/`isProcessing()` plus an unknown fallback. Apply confirmed final outcomes idempotently. A failed query or missing result leaves reconciliation open.
 4. Use one in-flight query per attempt. Bound polling by the consumer's approved deadline/attempt limit, with delay/backoff and cancellation at owner shutdown. An example app policy is three query attempts, five seconds apart; this is an application choice, not an SDK guarantee.
 5. After the query budget ends, stop automatic polling, keep the original record and show “Pending confirmation” with an operator/support route. Resume reconciliation on explicit action or the app's established recovery schedule. Exhausting retries never establishes that payment failed.
@@ -62,6 +63,9 @@ Use these scenarios for an agent dry run and for deployment acceptance. Device/b
 
 | Scenario | Expected integration behavior |
 |---|---|
+| Pure Java / Groovy consumer | Uses the Java asset and native DSL; compiles against 1.1.0 without adding a Kotlin source plugin |
+| Existing payment owner; one failing callback | Applies a targeted fix; preserves the existing language, store, selected mode and working initialization |
+| Offline skill ZIP | Installs a complete `taplink-integration/` folder; references/assets resolve without private source access |
 | No credentials yet | Produces code/config wiring and compiles; runtime connection stays disabled until locally provisioned |
 | Chinese Sandbox preparation request | Uses Chinese public docs where available; distinguishes documentation environment from payment environment |
 | Documentation index returns 404 | Uses verified official page/navigation fallback and packaged version evidence; keeps independent integration work moving |
