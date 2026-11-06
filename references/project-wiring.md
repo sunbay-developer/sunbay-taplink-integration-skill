@@ -27,20 +27,21 @@ Read the relevant files and record the resolved values briefly:
 | Mode | User's requested mode/device arrangement and current connection settings | APPtoAPP / App-to-App / APP_TO_APP / same device → On-Device; separate terminal → explicit LAN/Cable; dedicated display → Sub-Screen |
 | Credentials | Existing provisioning or config field names | Reuse injection; keep values out of chat/output |
 
-Ask only when a choice remains unresolved after inspection. An APPtoAPP request already specifies the same-device route. For an unspecified mode, clarify the device arrangement; for USB, determine the supported protocol. One missing mode/endpoint still allows independent preparation. A missing credential still allows compilation.
+Ask only when a choice remains unresolved after inspection. An APPtoAPP request already specifies the same-device route; confirm unspecified [payment functions and tips](payment-choices.md) before implementing them. For an unspecified mode, clarify the device arrangement; for USB, determine the supported protocol. Missing choices still allow independent preparation. A missing credential still allows compilation.
 
 ## Inspect before changing
 
-Perform these checks even when the user supplies only a mode. Read configuration structure and field names without printing secret values.
+Perform these checks even when the user supplies only a mode. Start with the [local build environment](build-environment.md), including the IDE's selected Gradle JDK. Read configuration structure and field names without printing secret values.
 
 | Check | Reuse when present | Add or repair when missing |
 |---|---|---|
+| Local Gradle environment | Check wrapper/AGP compatibility, terminal and IDE Gradle JVMs, and daemon overrides | Select a compatible installed JDK in project-local settings; verify terminal build and IDE sync separately |
 | SDK dependency in the target module | Trace direct coordinates, catalog aliases/bundles, convention plugins and shared modules; retain the selected version | Consume an existing alias first; otherwise add the SDK through the project's dependency convention |
 | Dependency resolution | Inspect the selected variant's runtime graph; verify any local AAR's version and runtime libraries | Add only missing repositories/runtime libraries; [quick start](quick-start.md#1-resolve-dependencies) lists baseline requirements |
 | Android configuration | Keep compatible minSdk/toolchain, merged manifest and consumer rules | Address actual compatibility gaps and register the app's Application when needed |
 | Credentials and initialization | Reuse local provisioning and the existing SDK owner | Add local configuration fields and initialize once after credentials are available; empty keys keep runtime actions disabled |
 | Connection and call sites | Reuse the payment owner, callbacks, status UI and cleanup | Wire the requested factory into the existing connection action and owner lifecycle; keep UI updates on the main thread |
-| Existing checkout | Preserve order amounts, storage and unresolved attempts | Repair affected wiring; use the payment sections below when the task includes monetary operations |
+| Existing checkout and requested functions | Preserve order amounts, storage, unresolved attempts and explicit function/tip choices | Ask about unspecified SALE/AUTH/tip scope, then use the payment sections below for confirmed monetary operations |
 
 A catalog entry alone does not put the SDK on the app's classpath. Trace whether the target module consumes it, then verify resolution. Conversely, an SDK brought in through a convention plugin or shared module can already be present without a direct coordinate in the app build file. Avoid adding a second Maven declaration or mixing an existing AAR with the same Maven artifact.
 
@@ -87,7 +88,7 @@ Read the [Kotlin metadata callback](../taplink-protocol-reference.md#read-termin
 
 ## Build and handoff
 
-Use the existing wrapper and actual module/variant. Typical unflavored tasks:
+Use the existing wrapper, compatible local Gradle JVM and actual module/variant. Verify the [terminal and IDE environment](build-environment.md#verify-the-selected-runtime-and-ide-import) separately. Typical unflavored tasks:
 
 | Project | Compile | Runtime dependency inspection |
 |---|---|---|

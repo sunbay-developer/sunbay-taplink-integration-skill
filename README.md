@@ -31,7 +31,9 @@ Open your **existing Android project** and ask:
 The agent handles the integration checklist:
 
 - Detect the Android module, language, Gradle setup and existing SDK dependency.
+- Check the local Gradle/JDK compatibility, including the IDE's Gradle JDK and sync status.
 - Check repositories, SDK initialization, credential configuration, manifest and payment owner.
+- Ask which payment functions and tip options you need, then integrate the confirmed choices.
 - Reuse working code and add the missing APP-to-APP connection, UI and lifecycle wiring.
 - Run the relevant build checks and report any remaining local or device setup.
 
@@ -41,13 +43,15 @@ If your client does not select the installed skill automatically, select **tapli
 
 ### 3. Check the handoff
 
-Expect changed project files, selected module/mode/versions, local configuration location, the exact build result and the next device test. You can compile before obtaining credentials. Provisioning, terminal identity, transaction permissions and test-payment results are verified on the intended deployment.
+Expect changed project files, confirmed payment/tip choices, selected module/mode/versions, local configuration location, build and IDE sync results, and the next device test. If payment choices are still pending, the agent reports them alongside connection progress. You can compile before obtaining credentials. Provisioning, terminal identity, transaction permissions and test-payment results are verified on the intended deployment.
 
 ## What is included
 
 | Resource | When you need it |
 |---|---|
 | [Skill entry point](SKILL.md) | Agent routing and essential payment invariants |
+| [Local build environment](references/build-environment.md) | Check wrapper, AGP, terminal/IDE Gradle JDKs and first import |
+| [Payment choices](references/payment-choices.md) | Confirm SALE/AUTH, tips and relevant optional functions after a short mode request |
 | [Project wiring](references/project-wiring.md) | Find the app module and implement storage, UI, terminal identity and lifecycle seams |
 | [Quick start](references/quick-start.md) | Dependency, local credentials, initialization and first payment |
 | [Java / Groovy guide](references/java-and-groovy.md) | Java signatures and Groovy Gradle setup |
