@@ -1,6 +1,6 @@
 # sunbay-taplink-integration-skill
 
-Add **SUNBAY TapLink Android SDK 1.1.0 + Tapro 1.0.5** to an existing Kotlin or Java POS app: first SALE, original-transaction query, durable recovery and lifecycle cleanup. The agent adapts the integration to your current project.
+A reusable integration skill for AI coding assistants that support Agent Skills. Add **SUNBAY TapLink Android SDK 1.1.0 + Tapro 1.0.5** to an existing Kotlin or Java POS app: first SALE, original-transaction query, durable recovery and lifecycle cleanup. The agent adapts the integration to your current project.
 
 ## Get started
 
@@ -12,15 +12,15 @@ Run in your Android project with [Node.js 22.20+ and the skills CLI](https://git
 npx skills add sunbay-developer/sunbay-taplink-integration-skill --skill taplink-integration
 ```
 
-Select your coding agent when prompted. To target one explicitly, append `--agent codex` or `--agent claude-code`. Installation is project-local by default. Open a new agent session if the skill is not yet discovered.
+Select your coding agent when prompted. Installation is project-local by default. Open a new agent session if the skill is not yet discovered.
 
-**Without Node.js**, clone into the skill directory recognized by your client:
+**Without Node.js**, clone into the skill directory recognized by your client. This example uses `.agents/skills/`; adjust the destination to your client's directory:
 
 ```bash
 git clone https://github.com/sunbay-developer/sunbay-taplink-integration-skill.git .agents/skills/taplink-integration
 ```
 
-For Claude Code's dedicated directory, use `.claude/skills/taplink-integration` as the destination. For an offline handoff, extract the supplied `taplink-integration.zip` into `.agents/skills/` (or your client's skill directory). The final path must be `.agents/skills/taplink-integration/SKILL.md`, with `assets/` and `references/` beside it. Keep the whole folder together.
+For an offline handoff, extract the supplied `taplink-integration.zip` into your client's skill directory. Keep the complete `taplink-integration/` folder, including `SKILL.md`, `assets/` and `references/`.
 
 ### 2. Ask in one sentence
 
