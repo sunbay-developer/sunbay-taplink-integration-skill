@@ -4,7 +4,9 @@ Start with the existing app's [project wiring](project-wiring.md). This page use
 
 ## 1. Resolve dependencies
 
-Reuse the consumer's version catalog. Add repositories inside the existing `settings.gradle.kts` dependency resolution block:
+First [inspect the target module](project-wiring.md#inspect-before-changing) for direct, catalog, plugin, shared-module or local-AAR dependencies. Reuse the current SDK declaration and version. If a catalog alias already exists but is unused, consume it in the target module. Add the entries below only where missing, using the project's existing Gradle conventions.
+
+Repositories in the existing `settings.gradle.kts` dependency resolution block:
 
 ```kotlin
 dependencyResolutionManagement {
@@ -16,7 +18,7 @@ dependencyResolutionManagement {
 }
 ```
 
-App module:
+For a new unpinned integration, add SDK 1.1.0 through the catalog or the app's existing dependency style. Direct-coordinate equivalent:
 
 ```kotlin
 dependencies {

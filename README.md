@@ -22,25 +22,26 @@ git clone https://github.com/sunbay-developer/sunbay-taplink-integration-skill.g
 
 For Claude Code's dedicated directory, use `.claude/skills/taplink-integration` as the destination. For an offline handoff, extract the supplied `taplink-integration.zip` into `.agents/skills/` (or your client's skill directory). The final path must be `.agents/skills/taplink-integration/SKILL.md`, with `assets/` and `references/` beside it. Keep the whole folder together.
 
-### 2. Give the agent a task
+### 2. Ask in one sentence
 
-Paste this in your **existing Android project**:
+Open your **existing Android project** and ask:
 
-> Use taplink-integration. Add a $10 card SALE and original-transaction query using SDK 1.1.0 and Tapro 1.0.5. POS and Tapro run on the same device. Follow the project's existing language, Gradle files, order storage and UI. Credentials will be configured locally later. Implement the wiring and run the app's compile task.
+> Help me integrate APPtoAPP mode.
 
-For a LAN deployment:
+The agent handles the integration checklist:
 
-> Use taplink-integration. Integrate SDK 1.1.0 and Tapro 1.0.5 into this Android POS over LAN. Start with a $10 card SALE and original-transaction query. Reuse the existing language, order storage and UI. Credentials will be configured locally later. Modify the project, compile it and list the next device checks.
+- Detect the Android module, language, Gradle setup and existing SDK dependency.
+- Check repositories, SDK initialization, credential configuration, manifest and payment owner.
+- Reuse working code and add the missing APP-to-APP connection, UI and lifecycle wiring.
+- Run the relevant build checks and report any remaining local or device setup.
 
-The agent inspects the project first. Supply only choices it cannot infer: same device / LAN / USB / Sub-Screen, the intended terminal/protocol, and requested operations. Existing configuration and code supply the other details. Keep real app keys out of chat and source control.
+APPtoAPP, App-to-App and On-Device refer to the same-device integration. For another deployment, name LAN, USB or Sub-Screen instead. The agent reads project files before asking for missing details; versions, dependencies and implementation steps can come from the project and skill. Keep real app keys in local configuration.
+
+If your client does not select the installed skill automatically, select **taplink-integration** in its skill picker and send the same request.
 
 ### 3. Check the handoff
 
 Expect changed project files, selected module/mode/versions, local configuration location, the exact build result and the next device test. You can compile before obtaining credentials. Provisioning, terminal identity, transaction permissions and test-payment results are verified on the intended deployment.
-
-For an existing integration, keep the task narrow:
-
-> Use taplink-integration. This Java app already takes LAN payments. Fix recovery for 306 and a missing callback request ID. Reuse our current payment service and order repository.
 
 ## What is included
 

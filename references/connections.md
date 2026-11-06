@@ -1,5 +1,7 @@
 # Connection selection for SDK 1.1.0
 
+Treat `APPtoAPP`, `App-to-App`, `APP_TO_APP` and `On-Device` as names for the same-device integration. Use `ConnectionConfig.createOnDeviceMode()` for new SDK 1.1.0 wiring; preserve a deliberately configured `AppToAppMode`. This request already determines the device arrangement, so proceed with project inspection and connection setup.
+
 ## Modes and exact factories
 
 ```kotlin

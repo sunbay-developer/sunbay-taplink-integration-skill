@@ -1,6 +1,6 @@
 ---
 name: taplink-integration
-description: Integrate or troubleshoot SUNBAY TapLink Android SDK payments with Tapro in Kotlin or Java POS apps. Use for SDK integration, first SALE, LAN/USB/On-Device/Sub-Screen setup, refund/auth/query, and 306/308 recovery.
+description: Use when integrating or troubleshooting SUNBAY TapLink Android SDK payments with Tapro in Kotlin or Java POS apps, including APPtoAPP, App-to-App, APP_TO_APP, On-Device, LAN, USB or Sub-Screen setup, first SALE, refund/auth/query and 306/308 recovery.
 license: MIT
 ---
 
@@ -8,10 +8,13 @@ license: MIT
 
 Deliver working changes in the consumer's Android project. Packaged baseline: **SDK 1.1.0 + Tapro release_1.0.5**, checked **2026-11-04**. Keep an existing chosen version; use its artifact/release notes for differences. New integrations without a selected version use this verified baseline.
 
+Accept a short request such as **"Help me integrate APPtoAPP mode."** as an actionable integration task. Inspect the project first; obtain dependency, language, configuration and lifecycle details from files. APPtoAPP / App-to-App / APP_TO_APP / On-Device all select the same-device route; use `ConnectionConfig.createOnDeviceMode()` for SDK 1.1.0. The user has already selected the mode.
+
 ## Choose the shortest route
 
 | User task | Start here | Deliver |
 |---|---|---|
+| Integrate a mode / change connection mode | [Project inspection](references/project-wiring.md#inspect-before-changing), then the selected [connection](references/connections.md) | Missing dependency/configuration, initialization, selected connection and existing UI/lifecycle wiring |
 | First integration / first SALE | [Project wiring](references/project-wiring.md), then [quick start](references/quick-start.md) | Dependency, initialization, one selected connection, durable SALE/query flow, UI and cleanup wired into the app |
 | Existing integration needs one operation | [Protocol recipes](taplink-protocol-reference.md) and the existing payment owner | The requested operation using the same storage, callbacks and lifecycle |
 | Connection problem / 303 / 306 / 307 / 308 | [Recovery](references/recovery.md); [connections](references/connections.md) only for transport issues | Targeted diagnosis/fix with original-transaction recovery preserved |
@@ -23,9 +26,9 @@ Read only the selected route. A troubleshooting request does not need a new adap
 
 ## Work in the consumer's project
 
-1. Find the app module, source language, Gradle DSL/catalog, Application, payment owner and durable order store. Reuse them. Read [project wiring](references/project-wiring.md) for targeted searches and the actual seams to implement.
-2. Infer versions, mode and credential injection from the project/request. Ask only unresolved choices that affect implementation, such as the device arrangement or USB protocol. Continue dependency/storage/UI preparation while awaiting that choice. Real credentials stay local; their absence still permits compilation.
-3. For a first integration, adapt one matching asset: [Kotlin](assets/TaplinkQuickStart.kt) or [Java](assets/TaplinkQuickStartJava.java). Implement the store bridge and UI/lifecycle calls in the app, including terminal identity verification. Preserve existing abstractions for small extensions; add only dependencies needed by the selected flow.
+1. Run the [project inspection](references/project-wiring.md#inspect-before-changing): identify the target module, verify how it consumes the SDK, then check repositories, toolchain, manifest, initialization, credential injection and connection/lifecycle ownership. Summarize what exists and what needs changing; proceed to the missing wiring without asking the user to repeat facts found in files.
+2. Resolve the mode from the request and existing setup. Ask only for unresolved choices that affect implementation, such as an ambiguous target module or USB protocol. APPtoAPP needs no LAN address or USB protocol. Continue independent work while awaiting a necessary choice. Real credentials stay local; their absence still permits compilation.
+3. Preserve existing abstractions, versions and credential provisioning; add only missing dependencies and wiring. For a first payment flow, adapt one matching asset: [Kotlin](assets/TaplinkQuickStart.kt) or [Java](assets/TaplinkQuickStartJava.java), including the durable store bridge, UI, lifecycle and terminal identity verification. A mode-only request focuses on connection setup and existing call sites; additional payment operations follow the user's task. Use real order inputs or caller-supplied amounts when wiring checkout.
 4. Compile the actual module/variant using its wrapper. Select Kotlin or Java compilation for the existing project, inspect runtime dependencies, then address compiler errors against the target artifact. Missing toolchains/dependencies should be reported with the exact failed command; they do not establish that generated code compiles.
 
 ## Payment invariants
