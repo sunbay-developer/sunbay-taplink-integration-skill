@@ -70,6 +70,7 @@ Use these scenarios for an agent dry run and for deployment acceptance. Device/b
 | Scenario | Expected integration behavior |
 |---|---|
 | Pure Java / Groovy consumer | Uses the Java asset and native DSL; compiles against 1.1.0 without adding a Kotlin source plugin |
+| Existing POS adds a payment provider | Traces real checkout/provider/store/DI/lifecycle code, adapts TapLink at those owners and tests the existing checkout route; retains other providers |
 | Existing payment owner; one failing callback | Applies a targeted fix; preserves the existing language, store, selected mode and working initialization |
 | Offline skill ZIP | Installs a complete `taplink-integration/` folder; references/assets resolve without private source access |
 | No credentials yet | Produces code/config wiring and compiles; runtime connection stays disabled until locally provisioned |

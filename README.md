@@ -31,6 +31,7 @@ Open your **existing Android project** and ask:
 The agent handles the integration checklist:
 
 - Detect the Android module, language, Gradle setup and existing SDK dependency.
+- Review the current checkout, payment services, order store, dependency injection and lifecycle; identify the appropriate integration files before changing code.
 - Check the local Gradle/JDK compatibility, including the IDE's Gradle JDK and sync status.
 - Check repositories, SDK initialization, credential configuration, manifest and payment owner.
 - Ask which payment functions and tip options you need, then integrate the confirmed choices.
@@ -59,6 +60,7 @@ Expect changed project files, confirmed payment/tip choices, selected module/mod
 | [Skill entry point](SKILL.md) | Agent routing and essential payment invariants |
 | [Local build environment](references/build-environment.md) | Check wrapper, AGP, terminal/IDE Gradle JDKs and first import |
 | [Payment choices](references/payment-choices.md) | Confirm SALE/AUTH, tips and relevant optional functions after a short mode request |
+| [Existing POS structure](references/existing-pos.md) | Place TapLink within current modules, payment abstractions, order storage and checkout UI |
 | [Project wiring](references/project-wiring.md) | Find the app module and implement storage, UI, terminal identity and lifecycle seams |
 | [Quick start](references/quick-start.md) | Dependency, local credentials, initialization and first payment |
 | [Java / Groovy guide](references/java-and-groovy.md) | Java signatures and Groovy Gradle setup |

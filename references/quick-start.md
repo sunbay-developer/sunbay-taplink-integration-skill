@@ -1,6 +1,6 @@
 # First payment: SDK 1.1.0 + Tapro 1.0.5
 
-Start with the existing app's [local build environment](build-environment.md) and [project wiring](project-wiring.md). Verify wrapper/AGP and terminal/IDE Gradle JDK compatibility before adding dependencies. This page uses Kotlin DSL and Kotlin examples; for Java source or Groovy build files, use the matching [Java/Groovy guide](java-and-groovy.md) while retaining these dependency and payment requirements.
+For an existing POS, first [review its checkout structure and integration placement](existing-pos.md); adapt these recipes to its current owners. Check the app's [local build environment](build-environment.md) and [project wiring](project-wiring.md). Verify wrapper/AGP and terminal/IDE Gradle JDK compatibility before adding dependencies. This page uses Kotlin DSL and Kotlin examples; for Java source or Groovy build files, use the matching [Java/Groovy guide](java-and-groovy.md) while retaining these dependency and payment requirements.
 
 The SALE example below applies after the user selects SALE. For a request naming only a connection mode, first confirm [payment functions and tips](payment-choices.md); use the matching operation recipe for AUTH or other selections.
 
