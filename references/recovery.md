@@ -33,6 +33,12 @@ Tapro's 1.0.5 branch closes cancellable LAN/Cable flows on request timeout. A fl
 
 ## Error triage
 
+For "cannot start payment," identify the failing stage first: disabled action,
+click/owner wiring, SDK invocation, or a Tapro error. Follow the
+[checkout entry checks](project-wiring.md#verify-the-checkout-entry-path).
+An APPtoAPP integration should automatically bind the same-device identity;
+an extra terminal-confirmation screen is not an SDK requirement.
+
 Preserve actual `code`, `message`, operation ID and trace ID for sanitized diagnostics. Codes may arrive through different response paths: first distinguish `PaymentResult` from `PaymentError`, then inspect the result status/details. `PaymentError.canRetryWithSameId` is only an ID hint, not a payment-replay policy.
 
 | Code/symptom | Meaning/action |
@@ -74,6 +80,8 @@ Use these scenarios for an agent dry run and for deployment acceptance. Device/b
 | SDK-local `llms.txt` is absent | Continues from packaged references; does not require a private checkout or infer website index availability |
 | Merchant-wide transaction history | Locates the appropriate documented service and field/schema evidence before adding a backend call |
 | $10 SALE | Sends integer 1000 cents; UUID persisted before send; full public imports resolve against 1.1.0 |
+| First APPtoAPP SALE, metadata matches configured merchant | Automatically persists the same-device identity and enables Pay; no extra terminal-confirmation step |
+| Pay is disabled or a click does nothing | Shows the blocking reason near Pay; traces the real UI/owner/SDK path and reports the exact failing stage |
 | Approved / declined | Only `isSuccess()` settles as approved; `isFailed()` records decline |
 | PROCESSING / unknown status | Retains pending state and offers original-ID query |
 | Error contains no request ID | Uses captured/persisted original ID without `!!` |

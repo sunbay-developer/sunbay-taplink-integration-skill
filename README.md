@@ -35,9 +35,16 @@ The agent handles the integration checklist:
 - Check repositories, SDK initialization, credential configuration, manifest and payment owner.
 - Ask which payment functions and tip options you need, then integrate the confirmed choices.
 - Reuse working code and add the missing APP-to-APP connection, UI and lifecycle wiring.
+- Verify the payment button/caller reaches the SDK; explain any remaining block beside the action.
 - Run the relevant build checks and report any remaining local or device setup.
 
 APPtoAPP, App-to-App and On-Device refer to the same-device integration. For another deployment, name LAN, USB or Sub-Screen instead. The agent reads project files before asking for missing details; versions, dependencies and implementation steps can come from the project and skill. Keep real app keys in local configuration.
+
+After selecting SALE and tips, a new APPtoAPP app should let you **connect, enter
+the order amount/currency, and Pay**. Same-device terminal checks run automatically.
+Terminal selection is requested only when the target is ambiguous, such as
+multiple discovered LAN terminals. If Pay is unavailable, the app shows the reason
+and the next action beside it.
 
 If your client does not select the installed skill automatically, select **taplink-integration** in its skill picker and send the same request.
 

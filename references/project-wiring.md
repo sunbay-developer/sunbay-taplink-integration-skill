@@ -67,7 +67,7 @@ The samples expose a journal interface to reuse the app's storage. It is a seam 
 | `recordResult(id, result)` | Associate with captured original ID; apply confirmed final outcomes idempotently; retain processing/unknown |
 | `recordError(id, error)` | Retain pending attempt and sanitized error; keep recovery possible when callback IDs are missing |
 | Startup/recreation | Read unresolved attempts and saved terminal identity from existing storage; keep checkout gated until reconciled |
-| Connection identity | Read terminal info after connection; enroll/compare SN and merchant, then persist accepted identity with the attempt |
+| Connection identity | Read/compare metadata automatically for same-device or already selected targets; ask only to resolve an ambiguous target; persist identity with the attempt |
 | Checkout action | Validate order/amount; generate new UUID; serialize submission through the payment owner |
 | Result UI | Main-thread approved/declined/pending presentation, explicit original-ID query action, and storage-error state |
 | Lifecycle | Payment owner disconnects/removes listener; cancel polling/UI work, preserve durable attempts and pending writes |
@@ -80,11 +80,22 @@ With an existing `OrderRepository`/`PaymentService`, map the sample journal meth
 
 1. Initialize with locally provisioned credentials and the selected config.
 2. Connect. Clear payment readiness on disconnect/reconnecting.
-3. Call `TaplinkSDK.getClient().getTerminalInfo(callback)` and compare actual SN/merchant with the intended enrollment or saved attempt. Use a connection generation/owner guard so a late response from an older connection cannot mark a new connection ready.
+3. Call `TaplinkSDK.getClient().getTerminalInfo(callback)` and compare actual SN/merchant with provisioning or a saved attempt. In APPtoAPP, automatically save the initial verified identity; the same-device target is already selected. Use a connection generation/owner guard so a late response from an older connection cannot mark a new connection ready. For ambiguous cross-device targets, follow [identity by mode](connections.md#terminal-identity-by-mode).
 4. Submit SALE only on an explicit checkout action after identity readiness; transaction permission is checked separately by Tapro.
 5. Keep PROCESSING/unknown/errors pending; offer query with the saved original ID. Reconnect to the saved terminal for recovery, verify identity again and bound polling.
 
 Read the [Kotlin metadata callback](../taplink-protocol-reference.md#read-terminal-metadata) or [Java metadata callback](java-and-groovy.md#terminal-identity) for the exact API. Follow [recovery](recovery.md) for 306/307/308 and unresolved results.
+
+## Verify the checkout entry path
+
+Trace the implemented path from the user's action through the real application owner to `TaplinkSDK.getClient().sale(...)` (or the selected operation). A standalone adapter or an APK containing a Pay label leaves this check incomplete.
+
+- For a new APPtoAPP SALE app, the ordinary path is **Connect → enter order/amount/currency → Pay → complete payment/tip on Tapro**. Run metadata binding automatically. Existing apps retain their established checkout flow.
+- Verify the actual screen/caller owns the payment controller, the click handler invokes it, and normal configured/connected state enables the action. List the conditions that can still block it, using current project evidence.
+- Every blocking condition has a visible explanation and next action near Pay: missing configuration, connecting/metadata read, identity mismatch, storage error, invalid input or an unresolved payment. Preserve actual Host error codes/messages; an unsupported metadata action must not leave an unexplained disabled button.
+- Test readiness and submission through the application's payment owner with a fake terminal boundary, including successful same-device metadata without an extra confirmation, initial binding failure, stale callbacks, duplicate taps and original-ID recovery. Check UI/caller wiring separately from model tests.
+- When the user reports "cannot start payment," first establish whether Pay is disabled, a click reaches the SDK, or Tapro returns an error. Inspect the blocking state and call path before adding configuration switches or another dialog. If runtime evidence is still needed, request that exact status/error; keep credentials and full payment payloads private.
+- Local checks can establish wiring and state transitions. Record actual terminal/payment execution separately. If the user will perform device validation, provide the updated artifact and minimal manual path; respect that choice.
 
 ## Build and handoff
 

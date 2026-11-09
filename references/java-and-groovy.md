@@ -50,7 +50,7 @@ static void readTerminalIdentity(Consumer<TerminalInfo> onInfo, Consumer<Payment
 }
 ```
 
-Read `info.getTerminal().getSn()` and `info.getMerchantId()`. Missing/mismatched metadata keeps readiness disabled. First enrollment verifies the physical terminal; recovery compares with the original attempt. `onConnected` arguments may be placeholders before INIT.
+Read `info.getTerminal().getSn()` and `info.getMerchantId()`. For APPtoAPP, verify and persist same-device metadata automatically; Pay needs no extra confirmation screen. Ask for selection only when the target is ambiguous. Recovery compares with the original attempt; missing/mismatched metadata leaves a visible reason beside Pay. See [identity by mode](connections.md#terminal-identity-by-mode). `onConnected` arguments may be placeholders before INIT.
 
 ## Groovy dependency and credential injection
 

@@ -65,7 +65,7 @@ TaplinkSDK.discoverLanServices(object : DiscoveryListener {
 
 mDNS requires a network allowing discovery traffic. Manual/scanned endpoint connection remains useful where multicast is filtered. The QR content is `lan://host/port`. Use the actual advertised port, including after network/service changes. Never silently route recovery to another discovered terminal.
 
-Bind identity before the first payment: after connection, call `getTerminalInfo()` and compare `info.terminal.sn` with the terminal selected/provisioned by the merchant. For first enrollment, have the operator verify the physical terminal serial and persist the accepted SN, merchant context and endpoint. For a pending attempt, reset payment readiness on disconnect; after reconnect, read metadata and compare with that attempt's saved SN/merchant before query or any new payment. Missing metadata or a mismatch keeps the attempt pending and requires correcting the connection/identity. `getTerminalInfo()` is shown in [the protocol reference](../taplink-protocol-reference.md); its success establishes metadata, while transaction permission is validated separately.
+After choosing a LAN endpoint, compare returned identity with the selected/provisioned terminal. Use the [mode-specific procedure](#terminal-identity-by-mode); a first payment does not universally require a new confirmation screen.
 
 QR scanner dependencies in the consuming app:
 
@@ -80,6 +80,19 @@ dependencies {
 ```
 
 The SDK declares CAMERA and opens its scanner Activity, including permission handling. Preserve distinct errors: `E504` cancellation, `E505` permission denied, `E506` no usable camera. Verify the scanner theme and dependencies in the actual app.
+
+## Terminal identity by mode
+
+`Confirm this terminal` is an application UI choice, not a TapLink SDK prerequisite. Choose the shortest identity procedure supported by the deployment:
+
+| Existing target evidence | Integration behavior |
+|---|---|
+| APPtoAPP / On-Device | The mode already targets Tapro on this Android device. Read metadata, check configured merchant context and automatically persist the initial SN/merchant association. Enable Pay without asking the operator to reselect or confirm this device. |
+| Provisioned terminal or existing application binding | Reuse the established selection and compare metadata automatically. Preserve the application's normal workflow. |
+| LAN discovery with multiple plausible terminals, or an otherwise ambiguous target | Ask the operator to select/identify the intended terminal once, then persist that association. Physical serial confirmation is useful when it resolves this ambiguity. |
+| Pending attempt after reconnect/restart | Compare metadata with the original attempt's saved identity. A mismatch keeps payment/query blocked and preserves the original record; reconnect to its original target. A new confirmation cannot override the mismatch. |
+
+Use `getTerminalInfo()` to obtain `info.terminal.sn` and merchant context; see the [public callback](../taplink-protocol-reference.md#read-terminal-metadata). Clear readiness on disconnect and guard late metadata callbacks by connection generation. Missing metadata or an actual mismatch gets a visible reason and next action beside Pay. Preserve a deployment's approved provisioning path; do not replace it with an invented enrollment ceremony. Metadata and INIT/payment permissions are separate checks, and INIT remains automatic in the SDK.
 
 ## Reconnection and shared terminals
 
